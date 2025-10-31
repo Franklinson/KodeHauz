@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import openai
+import google.generativeai as genai
 import os
 import sys
 from dotenv import load_dotenv
@@ -24,27 +24,25 @@ def moderate_output(text):
         moderated = moderated.replace(keyword.upper(), "[REDACTED]")
     return moderated
 
-def call_openai_api(user_prompt):
-    """Make API call to OpenAI"""
+def call_gemini_api(user_prompt):
+    """Make API call to Google Gemini"""
     try:
-        client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_tokens=150,
-            temperature=0.7
-        )
-        return response.choices[0].message.content
+        genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+        
+        # Use a known working model from your list
+        model = genai.GenerativeModel('models/gemini-2.0-flash')
+        
+        full_prompt = f"{SYSTEM_PROMPT}\n\nUser: {user_prompt}"
+        response = model.generate_content(full_prompt)
+        
+        return response.text
     except Exception as e:
         return f"API Error: {str(e)}"
 
 def main():
     # Get API key
-    if not os.getenv('OPENAI_API_KEY'):
-        print("Please set OPENAI_API_KEY environment variable")
+    if not os.getenv('GEMINI_API_KEY'):
+        print("Please set GEMINI_API_KEY environment variable")
         sys.exit(1)
     
     # Get user input
@@ -60,7 +58,7 @@ def main():
         return
     
     # API call
-    ai_response = call_openai_api(user_prompt)
+    ai_response = call_gemini_api(user_prompt)
     
     # Output moderation
     if any(keyword in ai_response.lower() for keyword in BANNED_KEYWORDS):
